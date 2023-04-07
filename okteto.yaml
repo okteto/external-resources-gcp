@@ -23,19 +23,18 @@ deploy:
       echo ${GCP_SERVICE_KEY} | base64 -d > credentials.json
       kubectl create secret generic gcp-credentials --save-config --dry-run=client --from-file=credentials=credentials.json --from-literal=project=$GCP_PROJECT_ID -o yaml | kubectl apply -f -
 
-  # only run this command if you are not Workload Identity
+  # only run this command if you are not using Workload Identity
   - name: Configue GCP CLI
     command: |
-      echo ${GCP_SERVICE_KEY} | base64 -d | gcloud auth activate-service-account --key-file=-
-      gcloud --quiet config set project ${GCP_PROJECT_ID}
+      sh gcp/credentials/configure.sh
 
   - name: Create GCP Pub/Sub resources
     command: |
-      sh pubsub/deploy.sh
+      sh gcp/pubsub/deploy.sh
 
   - name: Create Storage bucket
     command: |
-      sh storage/deploy.sh
+      sh gcp/storage/deploy.sh
 
   - name: Deploy the Menu microservice
     command: |
@@ -49,6 +48,22 @@ deploy:
     command: |
      helm upgrade --install check check/chart --set image=${OKTETO_BUILD_CHECK_IMAGE} --set bucket="$STORAGE_BUCKET_NAME"
      echo "OKTETO_EXTERNAL_API_DOCS_ENDPOINTS_DOCS_URL=https://check-${OKTETO_NAMESPACE}.${OKTETO_DOMAIN}/docs" >> $OKTETO_ENV
+
+destroy:
+  image: google/cloud-sdk:alpine
+  commands:
+  # only run this command if you are not using Workload Identity
+  - name: Configue GCP CLI
+    command: |
+      sh gcp/credentials/configure.sh
+
+  - name: Delete the Pub/Sub resources
+    command: |
+      sh gcp/pubsub/destroy.sh
+
+  - name: Delete the GCP Storage bucket
+    command: |
+      sh gcp/storage/destroy.sh
 
 external:
   readme:
