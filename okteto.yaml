@@ -10,6 +10,9 @@ build:
   kitchen-dev:
     context: kitchen
     target: dev
+  
+  check:
+    context: check
 
 deploy:
   image: google/cloud-sdk:alpine
@@ -26,9 +29,13 @@ deploy:
       echo ${GCP_SERVICE_KEY} | base64 -d | gcloud auth activate-service-account --key-file=-
       gcloud --quiet config set project ${GCP_PROJECT_ID}
 
-  - name: Create a GCP Pub/Sub resources
+  - name: Create GCP Pub/Sub resources
     command: |
       sh pubsub/deploy.sh
+
+  - name: Create Storage bucket
+    command: |
+      sh storage/deploy.sh
 
   - name: Deploy the Menu microservice
     command: |
@@ -38,8 +45,10 @@ deploy:
     command: |
       helm upgrade --install kitchen kitchen/chart --set image=$OKTETO_BUILD_KITCHEN_IMAGE --set subscription=$PUBSUB_SUBSCRIPTION_NAME --set check=https://check-${OKTETO_NAMESPACE}.${OKTETO_DOMAIN}/checks
 
-destroy:
-
+  - name: Deploy the Check microservice
+    command: |
+     helm upgrade --install check check/chart --set image=${OKTETO_BUILD_CHECK_IMAGE} --set bucket="$STORAGE_BUCKET_NAME"
+     echo "OKTETO_EXTERNAL_API_DOCS_ENDPOINTS_DOCS_URL=https://check-${OKTETO_NAMESPACE}.${OKTETO_DOMAIN}/docs" >> $OKTETO_ENV
 
 external:
   readme:
@@ -65,7 +74,6 @@ external:
     notes: check/notes.md
     endpoints:
     - name: docs
-      url: https://example.com
 
 dev:
   menu:

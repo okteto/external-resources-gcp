@@ -1,12 +1,11 @@
-import boto3
 import os
 import tempfile
 import jinja2
 import uvicorn
 
-from botocore.exceptions import ClientError
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
+from google.cloud import storage
 
 from pydantic import BaseModel
 from typing import List
@@ -16,8 +15,8 @@ app = FastAPI()
 env = jinja2.Environment(loader=jinja2.PackageLoader("main"), autoescape=jinja2.select_autoescape())
 template = env.get_template("receipt.j2")
 
-s3 = boto3.client('s3')
-s3Bucket = os.getenv("BUCKET")
+client = storage.Client()
+gcpBucket = os.getenv("BUCKET")
 checks = {}
 
 
@@ -34,17 +33,18 @@ class Check(BaseModel):
 
 
 def upload_receipt(orderId: str, receipt: str):
-    
-    with tempfile.NamedTemporaryFile() as tmp:
-        tmp.write(bytes(receipt, encoding='utf8'))
-        tmp.seek(0)
-        key = f'{orderId}.txt'
-        try:
-            s3.upload_fileobj(tmp, s3Bucket, key, ExtraArgs={'ACL': 'public-read', 'ContentType': 'text/file', 'ContentEncoding':'utf-8'})
-            return f'https://{s3Bucket}.s3.amazonaws.com/{key}'
-        except ClientError as e:
-            print("failed to upload: ", e)
-            return ""
+    try:
+        key = f'{orderId}.txt'    
+        bucket = client.get_bucket(gcpBucket)
+        blob = bucket.blob(key)
+        blob.upload_from_string(receipt)
+        acl = blob.acl
+        acl.all().grant_read()
+        acl.save()
+        return blob.public_url
+    except Exception as e:
+        print("failed to upload: ", e)
+        return ""
 
 @app.get("/healthz")
 async def healthz():

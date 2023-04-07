@@ -27,8 +27,10 @@ if [ $exitCode -ne 0 ]; then
   fi
 fi
 
+dashboardUrl="https://console.cloud.google.com/cloudpubsub/topic/detail/${topic}?project=${GCP_PROJECT_ID}"
+
 {
-  echo "OKTETO_EXTERNAL_PUBSUB_ENDPOINTS_TOPIC_URL=https://example.com"
+  echo "OKTETO_EXTERNAL_PUBSUB_ENDPOINTS_TOPIC_URL=$dashboardUrl"
   echo "PUBSUB_TOPIC_NAME=$topic"
   echo "PUBSUB_SUBSCRIPTION_NAME=$subscription"
 } >> "$OKTETO_ENV"

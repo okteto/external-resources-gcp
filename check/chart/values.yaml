@@ -1,10 +1,7 @@
 replicaCount: 1
 
-image: external-resources-aws-demo-check:latest
+image: external-resources-gcp-demo-check:latest
 bucket: 
-credentials:
-  secret:
-    name: aws-credentials
 
 imagePullSecrets: []
 nameOverride: ""
