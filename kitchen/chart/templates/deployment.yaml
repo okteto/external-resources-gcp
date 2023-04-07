@@ -35,19 +35,34 @@ spec:
               containerPort: 8000
               protocol: TCP
           env:
-            - name: QUEUE
-              value: "{{ .Values.queue }}"
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /etc/gcp/credentials.json
+            - name: GCP_PROJECT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: gcp-credentials
+                  key: project
+            - name: SUBSCRIPTION
+              value: "{{ .Values.subscription }}"
             - name: CHECK
               value: "{{ .Values.check }}"
             - name: GIN_MODE
               value: release
             - name: PORT
               value: "8000"
-          envFrom:
-          - secretRef:
-              name: {{ .Values.credentials.secret.name }}
+          volumeMounts:
+          - mountPath: "/etc/gcp"
+            name: gcp-credentials
+            readOnly: true
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: gcp-credentials
+          secret:
+            secretName: gcp-credentials
+            items:
+            - key: credentials
+              path: credentials.json
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

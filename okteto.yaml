@@ -3,6 +3,13 @@ icon: https://raw.githubusercontent.com/okteto/icons/main/oktaco.png
 build:
   menu:
     context: menu
+  
+  kitchen:
+    context: kitchen
+
+  kitchen-dev:
+    context: kitchen
+    target: dev
 
 deploy:
   image: google/cloud-sdk:alpine
@@ -25,7 +32,11 @@ deploy:
 
   - name: Deploy the Menu microservice
     command: |
-      helm upgrade --install menu menu/chart --set image=$OKTETO_BUILD_MENU_IMAGE --set topic=$PUBSUB_TOPIC_NAME --set subscription=$PUBSUB_SUBSCRIPTION_NAME --set author="${OKTETO_NAMESPACE}-${OKTETO_USERNAME}"
+      helm upgrade --install menu menu/chart --set image=$OKTETO_BUILD_MENU_IMAGE --set topic=$PUBSUB_TOPIC_NAME --set author="${OKTETO_NAMESPACE}-${OKTETO_USERNAME}"
+
+  - name: Deploy the Kitchen microservice
+    command: |
+      helm upgrade --install kitchen kitchen/chart --set image=$OKTETO_BUILD_KITCHEN_IMAGE --set subscription=$PUBSUB_SUBSCRIPTION_NAME --set check=https://check-${OKTETO_NAMESPACE}.${OKTETO_DOMAIN}/checks
 
 destroy:
 

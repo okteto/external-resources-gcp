@@ -10,9 +10,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sqs"
+	"cloud.google.com/go/pubsub"
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,9 +28,8 @@ type FoodReady struct {
 }
 
 type PendingOrder struct {
-	OrderID       string             `json:"orderId"`
-	ReceiptHandle string             `json:"-"`
-	Items         []PendingOrderItem `json:"items"`
+	OrderID string             `json:"orderId"`
+	Items   []PendingOrderItem `json:"items"`
 }
 
 type PendingOrderItem struct {
@@ -40,11 +37,10 @@ type PendingOrderItem struct {
 	Ready bool   `json:"ready"`
 }
 
-func CreatePendingOrder(receiptHandle string, orderID string, f FoodOrder) PendingOrder {
+func CreatePendingOrder(orderID string, f FoodOrder) PendingOrder {
 	p := PendingOrder{
-		OrderID:       orderID,
-		ReceiptHandle: receiptHandle,
-		Items:         make([]PendingOrderItem, len(f.Items)),
+		OrderID: orderID,
+		Items:   make([]PendingOrderItem, len(f.Items)),
 	}
 
 	for i := range f.Items {
@@ -95,7 +91,7 @@ func (p *PendingOrder) OrderCheck() {
 	}
 
 	if r.StatusCode >= 400 {
-		fmt.Printf("failed to order check: %d %s", r.StatusCode, r.Status)
+		fmt.Printf("failed to order check: %s", r.Status)
 		fmt.Println()
 		return
 	}
@@ -115,17 +111,17 @@ func (p *PendingOrder) IsReady() bool {
 }
 
 func checkForMessages(ctx context.Context, messages chan PendingOrder) {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{}))
-	svc := sqs.New(sess)
-	urlResult, err := svc.GetQueueUrl(&sqs.GetQueueUrlInput{
-		QueueName: aws.String(os.Getenv("QUEUE")),
-	})
-
+	client, err := pubsub.NewClient(ctx, mustGetenv("GCP_PROJECT_ID"))
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
+	defer client.Close()
 
-	queueURL := urlResult.QueueUrl
+	subscriptionName := mustGetenv("SUBSCRIPTION")
+	subscription := client.Subscription(subscriptionName)
+	if _, err := subscription.Exists(ctx); err != nil {
+		log.Fatal(err)
+	}
 
 	for {
 		select {
@@ -133,52 +129,40 @@ func checkForMessages(ctx context.Context, messages chan PendingOrder) {
 			fmt.Println("stop receiving messages")
 			return
 		default:
-			msgResult, err := svc.ReceiveMessage(&sqs.ReceiveMessageInput{
-				QueueUrl:            queueURL,
-				MaxNumberOfMessages: aws.Int64(5),
-				WaitTimeSeconds:     aws.Int64(3),
-			})
-
-			if err != nil {
-				fmt.Println(err)
-				break
-			}
-
-			if len(msgResult.Messages) == 0 {
-				continue
-			}
-
-			fmt.Printf("received %d messages from the queue", len(msgResult.Messages))
-			fmt.Println()
-
-			for _, m := range msgResult.Messages {
+			err := subscription.Receive(ctx, func(_ context.Context, msg *pubsub.Message) {
+				fmt.Println("received message")
 
 				var order FoodOrder
-				if err := json.Unmarshal([]byte(*m.Body), &order); err != nil {
+				if err := json.Unmarshal(msg.Data, &order); err != nil {
 					fmt.Printf("failed to unmarshall the message: %s", err)
 					fmt.Println()
-					break
+					return
 				}
 
-				p := CreatePendingOrder(*m.ReceiptHandle, *m.MessageId, order)
+				p := CreatePendingOrder(msg.ID, order)
 
 				fmt.Printf("sending order %s with %d items to the kitchen", p.OrderID, len(p.Items))
 				fmt.Println()
 
 				messages <- p
 
-				_, err := svc.DeleteMessage(&sqs.DeleteMessageInput{
-					QueueUrl:      queueURL,
-					ReceiptHandle: m.ReceiptHandle,
-				})
+				msg.Ack()
+			})
 
-				if err != nil {
-					fmt.Printf("failed to delete message %s: %s", *m.MessageId, err)
-					fmt.Println()
-				}
+			if err != nil {
+				fmt.Println(err)
+				break
 			}
 		}
 	}
+}
+
+func mustGetenv(k string) string {
+	v := os.Getenv(k)
+	if v == "" {
+		log.Fatalf("%s environment variable not set.", k)
+	}
+	return v
 }
 
 func main() {
