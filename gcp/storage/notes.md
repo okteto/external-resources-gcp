@@ -1,0 +1,3 @@
+Cloud Storage is a service for storing your objects in Google Cloud. An object is an immutable piece of data consisting of a file of any format. You store objects in containers called buckets. All buckets are associated with a project, and you can group your projects under an organization. Each project, bucket, and object in Google Cloud is a resource in Google Cloud, as are things such as Compute Engine instances.
+
+Visit https://github.com/okteto/gcp to learn more about how to integrate Okteto and all the GCP services together to create a next generation development experience for your entire team.

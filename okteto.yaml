@@ -1,0 +1,113 @@
+icon: https://raw.githubusercontent.com/okteto/icons/main/oktaco.png
+
+build:
+  menu:
+    context: menu
+  
+  kitchen:
+    context: kitchen
+
+  kitchen-dev:
+    context: kitchen
+    target: dev
+  
+  check:
+    context: check
+
+deploy:
+  image: google/cloud-sdk:alpine
+  commands:
+  # only run this command if you are not Workload Identity
+  - name: Create the GCP secret
+    command: |
+      echo ${GCP_SERVICE_KEY} | base64 -d > credentials.json
+      kubectl create secret generic gcp-credentials --save-config --dry-run=client --from-file=credentials=credentials.json --from-literal=project=$GCP_PROJECT_ID -o yaml | kubectl apply -f -
+
+  # only run this command if you are not using Workload Identity
+  - name: Configue GCP CLI
+    command: |
+      sh gcp/credentials/configure.sh
+
+  - name: Create GCP Pub/Sub resources
+    command: |
+      sh gcp/pubsub/deploy.sh
+
+  - name: Create Storage bucket
+    command: |
+      sh gcp/storage/deploy.sh
+
+  - name: Deploy the Menu microservice
+    command: |
+      helm upgrade --install menu menu/chart --set image=$OKTETO_BUILD_MENU_IMAGE --set topic=$PUBSUB_TOPIC_NAME --set author="${OKTETO_NAMESPACE}-${OKTETO_USERNAME}"
+
+  - name: Deploy the Kitchen microservice
+    command: |
+      helm upgrade --install kitchen kitchen/chart --set image=$OKTETO_BUILD_KITCHEN_IMAGE --set subscription=$PUBSUB_SUBSCRIPTION_NAME --set check=https://check-${OKTETO_NAMESPACE}.${OKTETO_DOMAIN}/checks
+
+  - name: Deploy the Check microservice
+    command: |
+     helm upgrade --install check check/chart --set image=${OKTETO_BUILD_CHECK_IMAGE} --set bucket="$STORAGE_BUCKET_NAME"
+     echo "OKTETO_EXTERNAL_API_DOCS_ENDPOINTS_DOCS_URL=https://check-${OKTETO_NAMESPACE}.${OKTETO_DOMAIN}/docs" >> $OKTETO_ENV
+
+destroy:
+  image: google/cloud-sdk:alpine
+  commands:
+  # only run this command if you are not using Workload Identity
+  - name: Configue GCP CLI
+    command: |
+      sh gcp/credentials/configure.sh
+
+  - name: Delete the Pub/Sub resources
+    command: |
+      sh gcp/pubsub/destroy.sh
+
+  - name: Delete the GCP Storage bucket
+    command: |
+      sh gcp/storage/destroy.sh
+
+external:
+  readme:
+    icon: okteto
+    notes: README.md
+    endpoints:
+    - name: readme
+      url: https://github.com/okteto/external-resources-gcp
+  pubsub:
+    icon: gcp
+    notes: pubsub/notes.md
+    endpoints:
+    - name: topic
+  storage:
+    icon: gcp
+    notes: storage/notes.md
+    endpoints:
+    - name: bucket
+  api-docs:
+    icon: dashboard
+    notes: check/notes.md
+    endpoints:
+    - name: docs
+
+dev:
+  menu:
+    command: bash
+    sync:
+    - menu:/usr/src/app
+    forward:
+    - 9229:9229
+  
+  kitchen:
+    image: ${OKTETO_BUILD_KITCHEN_DEV_IMAGE}
+    command: bash
+    sync:
+    - kitchen:/usr/src/app
+    environment:
+     GIN_MODE: debug
+  
+  check:
+    command: bash
+    sync:
+    - check:/usr/src/app
+    environment:
+     RELOAD: true
+

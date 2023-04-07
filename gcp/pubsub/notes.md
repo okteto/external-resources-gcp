@@ -1,0 +1,3 @@
+Google Cloud Pub/Sub provides messaging between applications. Cloud Pub/Sub is designed to provide reliable, many-to-many, asynchronous messaging between applications. Publisher applications can send messages to a "topic" and other applications can subscribe to that topic to receive the messages. It's a great way to build event-driven applications like this sample! 
+
+Visit https://github.com/okteto/gcp to learn more about how to integrate Okteto and all the GCP services together to create a next generation development experience for your entire team.
