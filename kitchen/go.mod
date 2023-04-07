@@ -1,4 +1,4 @@
-module github.com/okteto/external-resources-aws-demo/kitchen
+module github.com/okteto/external-resources-gcp-demo/kitchen
 
 go 1.19
 
