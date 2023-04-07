@@ -77,13 +77,11 @@ external:
     notes: pubsub/notes.md
     endpoints:
     - name: topic
-      url: https://example.com
   storage:
     icon: gcp
     notes: storage/notes.md
     endpoints:
     - name: bucket
-      url: https://example.com
   api-docs:
     icon: dashboard
     notes: check/notes.md

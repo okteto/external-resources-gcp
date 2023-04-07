@@ -15,7 +15,7 @@ if [ $exitCode -ne 0 ]; then
 fi
 
 {
-  echo "OKTETO_EXTERNAL_PUBSUB_ENDPOINTS_TOPIC_URL=https://console.cloud.google.com/storage/browser/${bucket}"
+  echo "OKTETO_EXTERNAL_STORAGE_ENDPOINTS_BUCKET_URL=https://console.cloud.google.com/storage/browser/${bucket}?project=${GCP_PROJECT_ID}"
   echo "STORAGE_BUCKET_NAME=$bucket"
 } >> "$OKTETO_ENV"
 
