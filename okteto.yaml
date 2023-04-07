@@ -74,12 +74,12 @@ external:
       url: https://github.com/okteto/external-resources-gcp
   pubsub:
     icon: gcp
-    notes: pubsub/notes.md
+    notes: gcp/pubsub/notes.md
     endpoints:
     - name: topic
   storage:
     icon: gcp
-    notes: storage/notes.md
+    notes: gcp/storage/notes.md
     endpoints:
     - name: bucket
   api-docs:
