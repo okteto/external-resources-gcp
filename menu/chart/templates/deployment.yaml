@@ -37,14 +37,28 @@ spec:
           env:
           - name: AUTHOR
             value: "{{ .Values.author }}"
-          - name: QUEUE
-            value: "{{ .Values.queue }}"
-          envFrom:
-          - secretRef:
-              name: {{ .Values.credentials.secret.name }}
-
+          - name: TOPIC
+            value: "{{ .Values.topic }}"
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: /etc/gcp/credentials.json
+          - name: GCP_PROJECT_ID
+            valueFrom:
+              secretKeyRef:
+                name: gcp-credentials
+                key: project
+          volumeMounts:
+          - mountPath: "/etc/gcp"
+            name: gcp-credentials
+            readOnly: true
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: gcp-credentials
+          secret:
+            secretName: gcp-credentials
+            items:
+            - key: credentials
+              path: credentials.json
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

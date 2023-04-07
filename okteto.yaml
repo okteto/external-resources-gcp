@@ -4,54 +4,31 @@ build:
   menu:
     context: menu
 
-  kitchen:
-    context: kitchen
-
-  kitchen-dev:
-    context: kitchen
-    target: dev
-
-  check:
-    context: check
-
 deploy:
   image: google/cloud-sdk:alpine
   commands:
-  # only run this command if you are not using Roles
+  # only run this command if you are not Workload Identity
   - name: Create the GCP secret
     command: |
-      kubectl create secret generic gcp-credentials --save-config --dry-run=client --from-literal=AWS_REGION=$AWS_REGION --from-literal=AWS_DEFAULT_REGION=$AWS_REGION --from-literal=AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY --from-literal=AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID -o yaml | kubectl apply -f -
+      echo ${GCP_SERVICE_KEY} | base64 -d > credentials.json
+      kubectl create secret generic gcp-credentials --save-config --dry-run=client --from-file=credentials=credentials.json --from-literal=project=$GCP_PROJECT_ID -o yaml | kubectl apply -f -
+
+  # only run this command if you are not Workload Identity
+  - name: Configue GCP CLI
+    command: |
+      echo ${GCP_SERVICE_KEY} | base64 -d | gcloud auth activate-service-account --key-file=-
+      gcloud --quiet config set project ${GCP_PROJECT_ID}
 
   - name: Create a GCP Pub/Sub resources
     command: |
-      sh pubusb/deploy.sh
-  
-  - name: Create a GCP Storage bucket
-    command: |
-      sh storage/deploy.sh
+      sh pubsub/deploy.sh
 
   - name: Deploy the Menu microservice
     command: |
-      helm upgrade --install menu menu/chart --set image=$OKTETO_BUILD_MENU_IMAGE --set queue=$SQS_QUEUE_URL --set author="${OKTETO_NAMESPACE}-${OKTETO_USERNAME}"
-
-  - name: Deploy the Kitchen microservice
-    command: helm upgrade --install kitchen kitchen/chart --set image=$OKTETO_BUILD_KITCHEN_IMAGE --set queue=$SQS_QUEUE_NAME --set check=https://check-${OKTETO_NAMESPACE}.${OKTETO_DOMAIN}/checks
-
-  - name: Deploy the Check microservice
-    command: |
-     helm upgrade --install check check/chart --set image=${OKTETO_BUILD_CHECK_IMAGE} --set bucket="$STORAGE_BUCKET_NAME"
-     echo "OKTETO_EXTERNAL_API_DOCS_ENDPOINTS_DOCS_URL=https://check-${OKTETO_NAMESPACE}.${OKTETO_DOMAIN}/docs" >> $OKTETO_ENV
+      helm upgrade --install menu menu/chart --set image=$OKTETO_BUILD_MENU_IMAGE --set topic=$PUBSUB_TOPIC_NAME --set subscription=$PUBSUB_SUBSCRIPTION_NAME --set author="${OKTETO_NAMESPACE}-${OKTETO_USERNAME}"
 
 destroy:
-  image: google/cloud-sdk:alpine
-  commands:
-  - name: Delete the Pub/Sub resources
-    command: |
-      sh pubsub/destroy.sh
 
-  - name: Delete the GCP Storage bucket
-    command: |
-      sh storage/destroy.sh
 
 external:
   readme:
@@ -64,17 +41,20 @@ external:
     icon: gcp
     notes: pubsub/notes.md
     endpoints:
-    - name: queue
+    - name: topic
+      url: https://example.com
   storage:
     icon: gcp
     notes: storage/notes.md
     endpoints:
     - name: bucket
+      url: https://example.com
   api-docs:
     icon: dashboard
     notes: check/notes.md
     endpoints:
     - name: docs
+      url: https://example.com
 
 dev:
   menu:

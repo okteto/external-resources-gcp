@@ -1,16 +1,23 @@
 #!/bin/sh
 
-output=$(aws sqs get-queue-url --queue-name "${OKTETO_NAMESPACE}-oktacoshop" --output=json)
-if [ $? -eq 254 ]; then
-  exit 0
-fi
-
-queue=$(echo "$output" |  jq -r '.["QueueUrl"]')
-
-aws sqs delete-queue --queue-url "$queue" > /dev/null
+subscription="${topic}-sub"
+deleteSubscription=$(gcloud pubsub subscriptions delete "$subscription" --topic="$topic")
 exitCode=$?
-if [ $exitCode -eq 254 ]; then
-  exit 0
+
+if [ $exitCode -ne 0 ]; then
+  echo "$deleteSubscription" | grep -q "Resource doesn't exist in the project" 
+  if [ $? -eq 0 ]; then
+    echo "Failed to delete subscription: $deleteSubscription"
+    exit 1
+  fi
 fi
 
-exit $exitCode
+topic="${OKTETO_NAMESPACE}-oktacoshop-gcp"
+deleteTopic=$(gcloud pubsub topics delete "$topic")
+if [ $exitCode -ne 0 ]; then
+  echo "$deleteTopic" | grep -q "Resource doesn't exist in the project" 
+  if [ $? -eq 0 ]; then
+    echo "Failed to delete topic: $deleteTopic"
+    exit 1
+  fi
+fi

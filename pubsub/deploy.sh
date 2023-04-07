@@ -1,36 +1,39 @@
 #!/bin/sh
 
-queueName="${OKTETO_NAMESPACE}-oktacoshop"
-createOutput=$(aws sqs create-queue --queue-name "$queueName" --tags owner="${OKTETO_NAME}")
+topic="${OKTETO_NAMESPACE}-oktacoshop-gcp"
+createTopic=$(gcloud pubsub topics create "$topic")
 exitCode=$?
 
-if [ $exitCode -ne 0 ] && [ $exitCode -ne 254 ]; then
-  echo "Failed to create SQS: exit code $exitCode"
-  exit $exitCode
+if [ $exitCode -ne 0 ]; then
+  echo "$createTopic" | grep -q "Resource already exists in the project" 
+  if [ $? -eq 1 ]; then
+    echo "Topic $topic already exists"
+  else
+    echo "Failed to create topic: $createTopic"
+    exit 1
+  fi
 fi
 
-
-if [ $exitCode -eq 0 ]; then
-  queueUrl=$(printf %s "$createOutput" | jq '.["QueueUrl"]')
-  echo "SQS queue ${queueUrl} created successfully"
+subscription="${topic}-sub"
+createSubscription=$(gcloud pubsub subscriptions create "$subscription" --topic="$topic")
+exitCode=$?
+if [ $exitCode -ne 0 ]; then
+  echo "$createSubscription" | grep -q "Resource already exists in the project" 
+  if [ $? -eq 1 ]; then
+    echo "Subscription $subscription already exists"
+  else
+    echo "Failed to create subscription: $createSubscription"
+    exit 1
+  fi
 fi
-
-if [ $exitCode -eq 254 ]; then
-  echo "SQS queue ${queueName} already exists"
-  output=$(aws sqs get-queue-url --queue-name "$queueName" --output=json)
-  queueUrl=$(echo "$output" | jq '.["QueueUrl"]')
-fi
-
-encoded=$(printf %s "$queue" | jq -sRr @uri)
-dashboard="https://${AWS_REGION}.console.aws.amazon.com/sqs/v2/home?region=${AWS_REGION}#/queues/${encoded}"
 
 {
-  echo "OKTETO_EXTERNAL_SQS_ENDPOINTS_QUEUE_URL=$dashboard"
-  echo "SQS_QUEUE_URL=$queueUrl"
-  echo "SQS_QUEUE_NAME=$queueName"
+  echo "OKTETO_EXTERNAL_PUBSUB_ENDPOINTS_TOPIC_URL=https://example.com"
+  echo "PUBSUB_TOPIC_NAME=$topic"
+  echo "PUBSUB_SUBSCRIPTION_NAME=$subscription"
 } >> "$OKTETO_ENV"
 
-echo "SQS queue configuration generated successfully"
+echo "PUB/SUB configuration generated successfully"
 exit 0
 
 

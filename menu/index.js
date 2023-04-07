@@ -1,8 +1,8 @@
 const express = require('express')
-const { SQSClient, SendMessageCommand } = require("@aws-sdk/client-sqs");
-const sqsClient = new SQSClient({region: process.env.REGION});
-const author = process.env.AUTHOR;
-const queue = process.env.QUEUE;
+const {PubSub} = require('@google-cloud/pubsub');
+const projectId = process.env.GCP_PROJECT_ID;
+const topicName = process.env.TOPIC;
+const pubsub = new PubSub({projectId});
 
 const app = express()
 app.use(express.json());
@@ -13,13 +13,10 @@ app.get('/healthz', function (req, res) {
 })
 
 app.post('/order', function (req, res) {
-  var params = {
-   MessageBody: JSON.stringify(req.body),
-   QueueUrl: queue
- };
-
- sqsClient.send(new SendMessageCommand(params))
-  .then(data => {
+  const payload = JSON.stringify(req.body);
+  const topic = pubsub.topic(topicName);
+  topic.publish(Buffer.from(payload))
+  .then(() => {
     console.log(`order sent to the kitchen 👩🏼‍🍳👨🏻‍🍳`);
     res.sendStatus(201);
   })

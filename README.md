@@ -15,10 +15,8 @@ This is an example of how to configure and deploy a development environment that
 1. [Create a service account key](https://cloud.google.com/iam/docs/keys-create-delete) with create/read/write/delete permissions to pub/sub and storage of IAM keys for your GCP accoun.
 1. Create the following Okteto secrets:
 
-        GCP_KEY: The service account key with permission to create, write, read, and delete the resources
-        GCP_PROJECT: The project id you would like to use for the external resources
-        GCP_ZONE: The zone in GCP you would like to use for the external resources
-        
+        GCP_SERVICE_KEY: The `base64` encoded service account key with permission to create, write, read, and delete the resources. 
+        GCP_PROJECT_ID: The project id you would like to use for the external resources
 
 
 > If you are using Okteto Self-Hosted, you can directly use a [Workload Identity](https://www.okteto.com/docs/self-hosted/administration/configuration/#workload-identity)
