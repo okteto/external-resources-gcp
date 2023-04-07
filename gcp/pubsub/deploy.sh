@@ -1,7 +1,7 @@
 #!/bin/sh
 
 topic="${OKTETO_NAMESPACE}-oktacoshop-gcp"
-createTopic=$(gcloud pubsub topics create "$topic")
+createTopic=$(gcloud pubsub topics create "$topic" 2>/dev/null)
 exitCode=$?
 
 if [ $exitCode -ne 0 ]; then
@@ -15,7 +15,7 @@ if [ $exitCode -ne 0 ]; then
 fi
 
 subscription="${topic}-sub"
-createSubscription=$(gcloud pubsub subscriptions create "$subscription" --topic="$topic")
+createSubscription=$(gcloud pubsub subscriptions create "$subscription" --topic="$topic" 2>/dev/null)
 exitCode=$?
 if [ $exitCode -ne 0 ]; then
   echo "$createSubscription" | grep -q "Resource already exists in the project" 

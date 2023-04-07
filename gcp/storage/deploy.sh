@@ -1,7 +1,7 @@
 #!/bin/sh
 
 bucket="${OKTETO_NAMESPACE}-oktacoshop"
-createBucket=$(gcloud storage buckets create "gs://${bucket}")
+createBucket=$(gcloud storage buckets create "gs://${bucket}" 2>/dev/null)
 exitCode=$?
 
 if [ $exitCode -ne 0 ]; then
