@@ -11,7 +11,7 @@ This is an example of how to configure and deploy a development environment that
 ### Prequisites:
 1. Okteto CLI 2.14 or newer
 1. A GCP account
-1. An Okteto account
+1. An Okteto account ([Sign-up](https://www.okteto.com/try-free/) for 30 day, self-hosted free trial)
 1. [Create a service account key](https://cloud.google.com/iam/docs/keys-create-delete) with create/read/write/delete permissions to pub/sub and storage of IAM keys for your GCP accoun.
 1. Create the following Okteto secrets:
 
