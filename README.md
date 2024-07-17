@@ -8,18 +8,18 @@ This is an example of how to configure and deploy a development environment that
 
 ## Run the demo application in Okteto
 
-### Prequisites:
+### Prerequisites:
 1. Okteto CLI 2.14 or newer
 1. A GCP account
 1. An Okteto account ([Sign-up](https://www.okteto.com/try-free/) for 30 day, self-hosted free trial)
 1. [Create a service account key](https://cloud.google.com/iam/docs/keys-create-delete) with create/read/write/delete permissions to pub/sub and storage of IAM keys for your GCP accoun.
-1. Create the following Okteto secrets:
+1. Add the following [Admin variables](https://www.okteto.com/docs/admin/dashboard/#admin-variables) in your Okteto cluster:
 
         GCP_SERVICE_KEY: The `base64` encoded service account key with permission to create, write, read, and delete the resources. 
         GCP_PROJECT_ID: The project id you would like to use for the external resources
 
 
-> If you are using Okteto Self-Hosted, you can directly use a [Workload Identity](https://www.okteto.com/docs/self-hosted/administration/configuration/#workload-identity)
+> If you are using Okteto Self-Hosted, you can also use a [Workload Identity](https://www.okteto.com/docs/self-hosted/administration/configuration/#workload-identity)
 
 Once this is configured, anyone with access to your Okteto instance will be able to deploy an development environment automatically, including the required cloud infrastructure.
 
@@ -51,6 +51,6 @@ $ okteto up check
 
 ## Notes
 
-This isn't an example of a properly architected perfectly designed distributed app... it's a simple
+This isn't an example of a properly architected, perfectly designed distributed app... it's a simple
 example of the various types of pieces and languages you might see (queues, persistent data, etc), and how to
 deal with them in Okteto.
